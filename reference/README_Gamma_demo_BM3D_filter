@@ -1,0 +1,308 @@
+# README_Gamma_demo_BM3D_filter
+###############################
+# CM, UW 20190219
+
+
+# README file and input data used are in ./inputs
+# visualizations of some results are in ./results
+# 
+# data include:
+#     - airborne high resolution backscatter (mli)
+#     - TerraSAR-X high resolution backscatter (mli)
+#     - Sentinel-1 backscatter (mli)
+#     - rasterfile gray scale image (bmp)
+#     - rasterfile color image (bmp)
+#     - complex valued S1 differential interferogram (fcomplex)
+
+#############################
+
+#     - TerraSAR-X high resolution backscatter (mli)
+# TerraSAR-X Venezia; image width is 1024 pixel, 5 range x 5 azimuth looks
+
+/bin/cp inputs/TX_Venezia.mli .
+/bin/cp inputs/TX_Venezia.mli.par .
+
+bm3d TX_Venezia.mli 1024 TX_Venezia_bm3d.mli 0 0 25
+dis2pwr TX_Venezia.mli TX_Venezia_bm3d.mli 1024 1024
+
+# indicate a reduced number of looks (looks may be correlated)
+bm3d TX_Venezia.mli 1024 TX_Venezia_bm3d12.mli 0 0 12
+dis2pwr TX_Venezia_bm3d.mli TX_Venezia_bm3d12.mli 1024 1024
+# --> almost identical result
+
+# indicate step 1 (slower by possibly slightly better)
+bm3d TX_Venezia.mli 1024 TX_Venezia_bm3d_step1.mli 0 0 25 - 8 16 1
+dis2pwr TX_Venezia_bm3d.mli TX_Venezia_bm3d_step1.mli 1024 1024
+# --> almost identical result
+
+# display using logarithmic (dB) scale
+ras_dB TX_Venezia.mli 1024 1 0 1 1 -22. 3.5 25 1 TX_Venezia.mli.bmp
+ras_dB TX_Venezia_bm3d.mli 1024 1 0 1 1 -22. 3.5 25 1 TX_Venezia_bm3d.mli.bmp
+dis2ras TX_Venezia.mli.bmp TX_Venezia_bm3d.mli.bmp &
+
+#############################
+
+#     - Sentinel-1 backscatter (mli)
+# Sentinel-1 Greenland, image width is 1024 pixel, 10 range x 2 azimuth looks
+/bin/cp inputs/S1_Greenland.mli .
+/bin/cp inputs/S1_Greenland.mli.par .
+
+bm3d S1_Greenland.mli 1024 S1_Greenland_bm3d.mli 0 0 20
+dis2pwr S1_Greenland.mli S1_Greenland_bm3d.mli 1024 1024 - - - - 0.95 0.3
+
+# display using logarithmic (dB) scale
+ras_dB S1_Greenland.mli 1024 1 0 1 1 -22. 3.5 60 1 S1_Greenland.mli.bmp
+ras_dB S1_Greenland_bm3d.mli 1024 1 0 1 1 -22. 3.5 60 1 S1_Greenland_bm3d.mli.bmp
+dis2ras S1_Greenland.mli.bmp S1_Greenland_bm3d.mli.bmp &
+
+#############################
+
+# - complex valued S1 differential interferogram (fcomplex)
+# S1A-S1B Interferogram Italy earthquake, image width is 1024 pixel, 10 range x 2 azimuth looks
+
+/bin/cp inputs/S1AS1B_Italy_Interfero.diff .
+/bin/cp inputs/S1AS1B_Italy_Interfero.diff.par .
+
+bm3d S1AS1B_Italy_Interfero.diff 1024 S1AS1B_Italy_Interfero_bm3d.diff 1 6 20
+dis2mph S1AS1B_Italy_Interfero.diff S1AS1B_Italy_Interfero_bm3d.diff 1024 1024 &
+
+rasmph S1AS1B_Italy_Interfero.diff 1024 1 0 1 1 1. 0.35 1 S1AS1B_Italy_Interfero.diff.bmp
+rasmph S1AS1B_Italy_Interfero_bm3d.diff 1024 1 0 1 1 1. 0.35 1 S1AS1B_Italy_Interfero_bm3d.diff.bmp
+dis2ras S1AS1B_Italy_Interfero.diff.bmp S1AS1B_Italy_Interfero_bm3d.diff.bmp
+
+# check effet on unwrapping:
+
+cc_wave S1AS1B_Italy_Interfero.diff - - S1AS1B_Italy_Interfero.diff.cc 1024 5 5
+mcf S1AS1B_Italy_Interfero.diff S1AS1B_Italy_Interfero.diff.cc - S1AS1B_Italy_Interfero.diff.unw 1024 0 0 0 - - 1 1 512 350 400 0
+
+cc_wave S1AS1B_Italy_Interfero_bm3d.diff - - S1AS1B_Italy_Interfero_bm3d.diff.cc 1024 5 5
+mcf S1AS1B_Italy_Interfero_bm3d.diff S1AS1B_Italy_Interfero_bm3d.diff.cc - S1AS1B_Italy_Interfero_bm3d.diff.unw 1024 0 0 0 - - 1 1 512 350 400 0
+
+dis2rmg S1AS1B_Italy_Interfero.diff.unw S1AS1B_Italy_Interfero_bm3d.diff.unw 1024 1024 1 0 0 0 0.333
+# --> in this case the unwrapping seems to work better with the filtered differential interferogram
+
+# compare also with an unwrapping using a multi-looking
+create_offset S1AS1B_Italy_Interfero.diff.par S1AS1B_Italy_Interfero.diff.par S1AS1B_Italy_Interfero.off1 1 1 1 0
+multi_cpx S1AS1B_Italy_Interfero.diff S1AS1B_Italy_Interfero.off1 S1AS1B_Italy_Interfero.diff2 S1AS1B_Italy_Interfero.off2 2 2 
+cc_wave S1AS1B_Italy_Interfero.diff2 - - S1AS1B_Italy_Interfero.diff2.cc 512 3 3
+mcf S1AS1B_Italy_Interfero.diff2 S1AS1B_Italy_Interfero.diff2.cc - S1AS1B_Italy_Interfero.diff2.unw 512 0 0 0 - - 1 1 512 175 200 0
+multi_real S1AS1B_Italy_Interfero.diff2.unw S1AS1B_Italy_Interfero.off2 S1AS1B_Italy_Interfero.diff2.unw1 S1AS1B_Italy_Interfero.off1 -2 -2 
+dis2rmg S1AS1B_Italy_Interfero.diff2.unw1 S1AS1B_Italy_Interfero_bm3d.diff.unw 1024 1024 1 0 0 0 0.333
+
+
+#############################
+
+# Color image : Jupiter_1, width: 600, noise: 13
+/bin/cp inputs/Jupiter_1.bmp .
+bm3d Jupiter_1.bmp 600 Jupiter_1_bm3d.bmp 2 5 - 13
+dis2ras Jupiter_1.bmp Jupiter_1_bm3d.bmp &
+
+#############################
+
+# Grayscale image : Jupiter_2_grayscale, width: 600, noise: 21
+/bin/cp inputs/Jupiter_2_grayscale.bmp .
+bm3d Jupiter_2_grayscale.bmp 600 Jupiter_2_grayscale_bm3d.bmp 2 2 - 21
+dis2ras Jupiter_2_grayscale.bmp Jupiter_2_grayscale_bm3d.bmp &
+
+#############################
+
+# Change detection using a backscatter pair (avalanche mapping in Aletsch region)
+# TSX HH-pol, range width 1024, 4 range x 4 azimuth looks
+
+/bin/cp inputs/Aletsch.201212??.TSX_HH.rmli .
+/bin/cp inputs/Aletsch.201212??.TSX_HH.rmli.par .
+
+
+# Spatial filtering using bm3d
+bm3d Aletsch.20121206.TSX_HH.rmli 1024 Aletsch.20121206.TSX_HH_bm3d.rmli 0 0 16
+bm3d Aletsch.20121217.TSX_HH.rmli 1024 Aletsch.20121217.TSX_HH_bm3d.rmli 0 0 16
+bm3d Aletsch.20121228.TSX_HH.rmli 1024 Aletsch.20121228.TSX_HH_bm3d.rmli 0 0 16
+
+# generate RGB of the 3 scenes using raspwr (for unfiltered and filtered MLIs)
+raspwr Aletsch.20121206.TSX_HH.rmli 1024 - - - - - - - Aletsch.20121206.TSX_HH.rmli.bmp
+raspwr Aletsch.20121217.TSX_HH.rmli 1024 - - - - - - - Aletsch.20121217.TSX_HH.rmli.bmp
+raspwr Aletsch.20121228.TSX_HH.rmli 1024 - - - - - - - Aletsch.20121228.TSX_HH.rmli.bmp
+ras_to_rgb Aletsch.20121206.TSX_HH.rmli.bmp Aletsch.20121217.TSX_HH.rmli.bmp Aletsch.20121228.TSX_HH.rmli.bmp Aletsch.20121206_20121217_20121228.TSX_HH.rmli.bmp
+
+raspwr Aletsch.20121206.TSX_HH_bm3d.rmli 1024 - - - - - - - Aletsch.20121206.TSX_HH_bm3d.rmli.bmp
+raspwr Aletsch.20121217.TSX_HH_bm3d.rmli 1024 - - - - - - - Aletsch.20121217.TSX_HH_bm3d.rmli.bmp
+raspwr Aletsch.20121228.TSX_HH_bm3d.rmli 1024 - - - - - - - Aletsch.20121228.TSX_HH_bm3d.rmli.bmp
+ras_to_rgb Aletsch.20121206.TSX_HH_bm3d.rmli.bmp Aletsch.20121217.TSX_HH_bm3d.rmli.bmp Aletsch.20121228.TSX_HH_bm3d.rmli.bmp Aletsch.20121206_20121217_20121228.TSX_HH_bm3d.rmli.bmp
+
+dis2ras Aletsch.20121206_20121217_20121228.TSX_HH.rmli.bmp Aletsch.20121206_20121217_20121228.TSX_HH_bm3d.rmli.bmp &
+
+
+# change detection method 0: ratio with 5x5 box filter (in ratio program)
+# change detection method 1: apply bm3d filtering to ratio of unfiltered data
+# change detection method 2: ratio of bm3d filtered MLIs without filtering in ratio program
+# change detection method 3: ratio of bm3d filtered MLIs with 5x5 box filter in ratio program
+
+# for 20121228, 20121217
+
+# calculate ratios
+ratio Aletsch.20121217.TSX_HH.rmli Aletsch.20121228.TSX_HH.rmli Aletsch.20121217_20121228.TSX_HH.ratio0 1024 5 5
+
+ratio Aletsch.20121217.TSX_HH.rmli Aletsch.20121228.TSX_HH.rmli Aletsch.20121217_20121228.TSX_HH.ratio1tmp 1024 1 1
+# filter ratio with bm3d profile 4 (log)
+bm3d Aletsch.20121217_20121228.TSX_HH.ratio1tmp 1024 Aletsch.20121217_20121228.TSX_HH.ratio1 0 4
+
+ratio Aletsch.20121217.TSX_HH_bm3d.rmli Aletsch.20121228.TSX_HH_bm3d.rmli Aletsch.20121217_20121228.TSX_HH.ratio2 1024 1 1
+
+ratio Aletsch.20121217.TSX_HH_bm3d.rmli Aletsch.20121228.TSX_HH_bm3d.rmli Aletsch.20121217_20121228.TSX_HH.ratio3 1024 5 5
+
+
+# for the visualization we want to display the ratios in color using log scale 
+
+# convert to dB scale
+linear_to_dB Aletsch.20121217_20121228.TSX_HH.ratio0 Aletsch.20121217_20121228.TSX_HH.ratio0_dB 1024
+linear_to_dB Aletsch.20121217_20121228.TSX_HH.ratio1 Aletsch.20121217_20121228.TSX_HH.ratio1_dB 1024
+linear_to_dB Aletsch.20121217_20121228.TSX_HH.ratio2 Aletsch.20121217_20121228.TSX_HH.ratio2_dB 1024
+linear_to_dB Aletsch.20121217_20121228.TSX_HH.ratio3 Aletsch.20121217_20121228.TSX_HH.ratio3_dB 1024
+
+# visualization 1: colorscale for ratio -3 dB to +3 dB (green: no change, red: increase of backscatter,
+# blue: decrease of backscatter (better suited to assess noise level)
+# visualization 2: colorscale for ratio -6 dB to +6 dB with bm3d filtered backscatter as brightness
+# (green: no change, red: increase of backscatter, blue: decrease of backscatter 
+# better suited as visualization of the change 
+
+vispwr.py Aletsch.20121217_20121228.TSX_HH.ratio0_dB 1024 0 -3 3 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio0_dB.bmp
+visdt_pwr.py Aletsch.20121217_20121228.TSX_HH.ratio0_dB Aletsch.20121228.TSX_HH_bm3d.rmli 1024 -6 6 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio0_dB_mli.bmp
+
+vispwr.py Aletsch.20121217_20121228.TSX_HH.ratio1_dB 1024 0 -3 3 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio1_dB.bmp
+visdt_pwr.py Aletsch.20121217_20121228.TSX_HH.ratio1_dB Aletsch.20121228.TSX_HH_bm3d.rmli 1024 -6 6 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio1_dB_mli.bmp
+
+vispwr.py Aletsch.20121217_20121228.TSX_HH.ratio2_dB 1024 0 -3 3 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio2_dB.bmp
+visdt_pwr.py Aletsch.20121217_20121228.TSX_HH.ratio2_dB Aletsch.20121228.TSX_HH_bm3d.rmli 1024 -6 6 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio2_dB_mli.bmp
+
+vispwr.py Aletsch.20121217_20121228.TSX_HH.ratio3_dB 1024 0 -3 3 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio3_dB.bmp
+visdt_pwr.py Aletsch.20121217_20121228.TSX_HH.ratio3_dB Aletsch.20121228.TSX_HH_bm3d.rmli 1024 -6 6 -m hls.cm -u Aletsch.20121217_20121228.TSX_HH.ratio3_dB_mli.bmp
+
+
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio0_dB.bmp Aletsch.20121217_20121228.TSX_HH.ratio1_dB.bmp
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio0_dB_mli.bmp Aletsch.20121217_20121228.TSX_HH.ratio1_dB_mli.bmp
+# conventional result (ratio0) is more noise and for the change areas less "focussed"
+# than the ratio1 result confirming that the bm3d filtering (using log profile) of the unfiltered ratio worked well !
+
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio1_dB.bmp Aletsch.20121217_20121228.TSX_HH.ratio2_dB.bmp
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio1_dB_mli.bmp Aletsch.20121217_20121228.TSX_HH.ratio2_dB_mli.bmp
+# In "noisy areas" the filtering done by bm3d is minimal and so the unfiltered ratio is very noisy there.
+# For areas with a more smooth backscatter ratio2 is also slightly more noisy than ratio1
+
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio1_dB.bmp Aletsch.20121217_20121228.TSX_HH.ratio3_dB.bmp
+dis2ras Aletsch.20121217_20121228.TSX_HH.ratio1_dB_mli.bmp Aletsch.20121217_20121228.TSX_HH.ratio3_dB_mli.bmp
+# Applying the aditional box filter in the ratio3 calculation increases the spatial scale of the
+# noise in "noisy areas". It also results in a somewhat less "focussed" result for the change areas.
+
+# So, at least in this example, it seems calculating the ratio from the unfiltered
+# MLIs and then applying the bm3d filtering (using log profile) provides the best
+# result for the detection of change (avalanches present in 20121228 but not in 20121217).
+
+# display result with color scale
+visdt_pwr.py Aletsch.20121217_20121228.TSX_HH.ratio1_dB Aletsch.20121228.TSX_HH_bm3d.rmli 1024 -6 6 -m hls.cm -b
+
+# the same can be done for the pair 20121206_20121217 that does not show the
+# same level of change (new avalanches)
+
+#############################
+
+# flood mapping (Houston, Aug. 2017)
+# using S1 data (vv and vh pol.) on 20170812 (S1A, pre-flood) and 20170830 (S1B, flooded, Hurricane Harvey)
+# image width is 2900 pixel (calibrated, geocoded, using 5x5 looks of GRD product)
+
+/bin/cp inputs/Houston.S1.201708??.v?.sigma0 .
+
+# characteristics of flooded areas (and water surfaces):
+#    - low vv backscatter     (single scene criteria)
+#    - low vh backscatter     (single scene criteria)
+#    - high vv/vh ratio        (single scene criteria)
+#    - high vv-unflooded/vv_flooded           (multi scene criteria)
+#    - high vh-unflooded/vh_flooded           (multi scene criteria)
+#    - high (vh/vv-unflooded)/(vh/vv_flooded) (multi scene criteria)
+
+# calculate unfiltered ratios
+ratio Houston.S1.20170812.vv.sigma0 Houston.S1.20170812.vh.sigma0 Houston.S1.20170812.vv_vh_ratio 2900 1 1 0
+ratio Houston.S1.20170830.vv.sigma0 Houston.S1.20170830.vh.sigma0 Houston.S1.20170830.vv_vh_ratio 2900 1 1 0
+ratio Houston.S1.20170812.vv.sigma0 Houston.S1.20170830.vv.sigma0 Houston.S1.20170812_20170830.vv_ratio 2900 1 1 0
+ratio Houston.S1.20170812.vh.sigma0 Houston.S1.20170830.vh.sigma0 Houston.S1.20170812_20170830.vh_ratio 2900 1 1 0
+ratio Houston.S1.20170812.vv_vh_ratio Houston.S1.20170830.vv_vh_ratio Houston.S1.20170812_20170830.vv_vh_ratio 2900 1 1 0
+
+# bm3d filtering of backscatter images
+bm3d Houston.S1.20170812.vh.sigma0 2900 Houston.S1.20170812.vh.sigma0.bm3d 0 0 16
+bm3d Houston.S1.20170812.vv.sigma0 2900 Houston.S1.20170812.vv.sigma0.bm3d 0 0 16
+bm3d Houston.S1.20170830.vh.sigma0 2900 Houston.S1.20170830.vh.sigma0.bm3d 0 0 16
+bm3d Houston.S1.20170830.vv.sigma0 2900 Houston.S1.20170830.vv.sigma0.bm3d 0 0 16
+
+# filter ratios with bm3d profile 4 (log)
+bm3d Houston.S1.20170812.vv_vh_ratio 2900 Houston.S1.20170812.vv_vh_ratio.bm3d 0 4
+bm3d Houston.S1.20170830.vv_vh_ratio 2900 Houston.S1.20170830.vv_vh_ratio.bm3d 0 4
+bm3d Houston.S1.20170812_20170830.vv_ratio 2900 Houston.S1.20170812_20170830.vv_ratio.bm3d 0 4
+bm3d Houston.S1.20170812_20170830.vh_ratio 2900 Houston.S1.20170812_20170830.vh_ratio.bm3d 0 4
+bm3d Houston.S1.20170812_20170830.vv_vh_ratio 2900 Houston.S1.20170812_20170830.vv_vh_ratio.bm3d 0 4
+
+# convert filtered ratios to dB scale
+linear_to_dB Houston.S1.20170812.vv_vh_ratio.bm3d Houston.S1.20170812.vv_vh_ratio.bm3d_dB 2900
+linear_to_dB Houston.S1.20170830.vv_vh_ratio.bm3d Houston.S1.20170830.vv_vh_ratio.bm3d_dB 2900
+linear_to_dB Houston.S1.20170812_20170830.vv_ratio.bm3d Houston.S1.20170812_20170830.vv_ratio.bm3d_dB 2900
+linear_to_dB Houston.S1.20170812_20170830.vh_ratio.bm3d Houston.S1.20170812_20170830.vh_ratio.bm3d_dB 2900
+linear_to_dB Houston.S1.20170812_20170830.vv_vh_ratio.bm3d Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB 2900
+linear_to_dB Houston.S1.20170830.vv.sigma0.bm3d Houston.S1.20170830.vv.sigma0.bm3d_dB 2900
+linear_to_dB Houston.S1.20170830.vh.sigma0.bm3d Houston.S1.20170830.vh.sigma0.bm3d_dB 2900
+linear_to_dB Houston.S1.20170812.vv.sigma0.bm3d Houston.S1.20170812.vv.sigma0.bm3d_dB 2900
+linear_to_dB Houston.S1.20170812.vh.sigma0.bm3d Houston.S1.20170812.vh.sigma0.bm3d_dB 2900
+
+# visualize individual criteria using only "flooded" acquisition
+vispwr.py Houston.S1.20170830.vv.sigma0.bm3d_dB 2900 0 -22 3.5 -m hls.cm -u Houston.S1.20170830.vv.sigma0.bm3d_dB.bmp
+vispwr.py Houston.S1.20170830.vh.sigma0.bm3d_dB 2900 0 -30 -4.5 -m hls.cm -u Houston.S1.20170830.vh.sigma0.bm3d_dB.bmp
+vispwr.py Houston.S1.20170830.vv_vh_ratio.bm3d_dB 2900 0 -2 14 -m hls.cm -u Houston.S1.20170830.vv_vh_ratio.bm3d_dB.bmp
+
+visdt_pwr.py Houston.S1.20170830.vv.sigma0.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -22 3.5 -m hls.cm -u Houston.S1.20170830.vv.sigma0.bm3d_dB_mli.bmp
+visdt_pwr.py Houston.S1.20170830.vh.sigma0.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -30 -4.5 -m hls.cm -u Houston.S1.20170830.vh.sigma0.bm3d_dB_mli.bmp
+visdt_pwr.py Houston.S1.20170830.vv_vh_ratio.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -2 14 -m hls.cm -u Houston.S1.20170830.vv_vh_ratio.bm3d_dB_mli.bmp
+
+eog results/Harvey_Hurricane_TSX_Charter_6_xl.png.jpg &
+
+# visualize individual criteria using "pre-flooding" and "flooded" acquisitions
+vispwr.py Houston.S1.20170812_20170830.vv_ratio.bm3d_dB 2900 0 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vv_ratio.bm3d_dB.bmp
+vispwr.py Houston.S1.20170812_20170830.vh_ratio.bm3d_dB 2900 0 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vh_ratio.bm3d_dB.bmp
+vispwr.py Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB 2900 0 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB.bmp
+
+visdt_pwr.py Houston.S1.20170812_20170830.vv_ratio.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vv_ratio.bm3d_dB_mli.bmp
+visdt_pwr.py Houston.S1.20170812_20170830.vh_ratio.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vh_ratio.bm3d_dB_mli.bmp
+visdt_pwr.py Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB Houston.S1.20170830.vv.sigma0.bm3d 2900 -6 6 -m hls.cm -u Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB_mli.bmp
+
+# visualize multiple criteria using only "flooded" acquisition
+# RGB of flooded vv, vh, vv_vh_ratio
+ras_linear Houston.S1.20170830.vv.sigma0.bm3d_dB 2900 1 0 1 1 -22 3.5 1 Houston.S1.20170830.vv.sigma0.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170830.vh.sigma0.bm3d_dB 2900 1 0 1 1 -30 -4.5 1 Houston.S1.20170830.vh.sigma0.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170830.vv_vh_ratio.bm3d_dB 2900 1 0 1 1 -2 14 1 Houston.S1.20170830.vv_vh_ratio.bm3d_dB_gray.bmp
+
+ras_to_rgb Houston.S1.20170830.vh.sigma0.bm3d_dB_gray.bmp Houston.S1.20170830.vv.sigma0.bm3d_dB_gray.bmp Houston.S1.20170830.vv_vh_ratio.bm3d_dB_gray.bmp Houston.S1.20170830.vh.vv.vv_vh_ratio.bm3d_dB.bmp
+
+# visualize multiple criteria using only "un-flooded" acquisition (for comparison)
+# RGB of flooded vv, vh, vv_vh_ratio
+ras_linear Houston.S1.20170812.vv.sigma0.bm3d_dB 2900 1 0 1 1 -22 3.5 1 Houston.S1.20170812.vv.sigma0.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170812.vh.sigma0.bm3d_dB 2900 1 0 1 1 -30 -4.5 1 Houston.S1.20170812.vh.sigma0.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170812.vv_vh_ratio.bm3d_dB 2900 1 0 1 1 -2 14 1 Houston.S1.20170812.vv_vh_ratio.bm3d_dB_gray.bmp
+
+ras_to_rgb Houston.S1.20170812.vh.sigma0.bm3d_dB_gray.bmp Houston.S1.20170812.vv.sigma0.bm3d_dB_gray.bmp Houston.S1.20170812.vv_vh_ratio.bm3d_dB_gray.bmp Houston.S1.20170812.vh.vv.vv_vh_ratio.bm3d_dB.bmp
+dis2ras Houston.S1.20170830.vh.vv.vv_vh_ratio.bm3d_dB.bmp Houston.S1.20170812.vh.vv.vv_vh_ratio.bm3d_dB.bmp &
+
+# visualize multiple criteria using "pre-flooding" and "flooded" acquisitions
+ras_linear Houston.S1.20170812_20170830.vv_ratio.bm3d_dB 2900 1 0 1 1 -6 6 1 Houston.S1.20170812_20170830.vv_ratio.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170812_20170830.vh_ratio.bm3d_dB 2900 1 0 1 1 -6 6 1 Houston.S1.20170812_20170830.vh_ratio.bm3d_dB_gray.bmp
+ras_linear Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB 2900 1 0 1 1 -6 6 1 Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB_gray.bmp
+
+# RGB of flooded vv, vh, pre-flood_flood vv ratio
+ras_to_rgb Houston.S1.20170830.vh.sigma0.bm3d_dB_gray.bmp Houston.S1.20170830.vv.sigma0.bm3d_dB_gray.bmp Houston.S1.20170812_20170830.vv_ratio.bm3d_dB_gray.bmp Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vv_ratio.bm3d_dB.bmp
+dis2ras Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vv_ratio.bm3d_dB.bmp Houston.S1.20170830.vh.vv.vv_vh_ratio.bm3d_dB.bmp &
+
+# RGB of flooded vv, vh, pre-flood_flood vh ratio
+ras_to_rgb Houston.S1.20170830.vh.sigma0.bm3d_dB_gray.bmp Houston.S1.20170830.vv.sigma0.bm3d_dB_gray.bmp Houston.S1.20170812_20170830.vh_ratio.bm3d_dB_gray.bmp Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vh_ratio.bm3d_dB.bmp
+dis2ras Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vh_ratio.bm3d_dB.bmp Houston.S1.20170830.vh.vv.vv_vh_ratio.bm3d_dB.bmp &
+
+# RGB of flooded vv, vh, pre-flood_flood vv_vh ratio
+ras_to_rgb Houston.S1.20170830.vh.sigma0.bm3d_dB_gray.bmp Houston.S1.20170830.vv.sigma0.bm3d_dB_gray.bmp Houston.S1.20170812_20170830.vv_vh_ratio.bm3d_dB_gray.bmp Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vv_vh_ratio.bm3d_dB.bmp
+dis2ras Houston.S1.20170830_vh.20170830_vv.20170812_20170830_vv_vh_ratio.bm3d_dB.bmp Houston.S1.20170830.vh.vv.vv_vh_ratio.bm3d_dB.bmp &
+
+#############################
+
